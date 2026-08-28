@@ -1,0 +1,6 @@
+{
+  "name": "Liberty Bell Digital - Home Services Growth System",
+  "description": "High-converting landing page for home service contractors and local trade businesses with AI Receptionist and lead capture system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
