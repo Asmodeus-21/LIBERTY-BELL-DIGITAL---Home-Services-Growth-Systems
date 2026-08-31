@@ -26,8 +26,44 @@ function useGhlEmbedScript() {
   }, []);
 }
 
+// Listens for GoHighLevel's postMessage on real form submission and fires
+// a Meta Pixel Lead event (for retargeting / lookalike audiences). GHL's
+// embed script posts either an array like ['form-submit', formId, jsonStr]
+// or an object like {type:'FORM_SUBMITTED', ...} depending on version, so
+// this checks defensively for both shapes rather than assuming one.
+function useGhlLeadTracking(formId: string) {
+    useEffect(() => {
+          function handleGhlMessage(event: MessageEvent) {
+                  const origin = event.origin || '';
+                  if (!origin.includes('leadconnectorhq') && !origin.includes('msgsndr')) return;
+                  const data: any = event.data;
+                  let isSubmit = false;
+                  if (Array.isArray(data)) {
+                            const tag = String(data[0] || '').toLowerCase();
+                            if (tag.includes('submit') || tag.includes('booking-complete') || tag.includes('complete')) {
+                                        isSubmit = true;
+                            }
+                  } else if (data && typeof data === 'object') {
+                            const type = String(data.type || data.eventName || '').toLowerCase();
+                            if (type.includes('form_submitted') || type.includes('form-submit') || type.includes('submitted')) {
+                                        isSubmit = true;
+                            }
+                  }
+                  if (isSubmit) {
+                            trackEvent('Lead', { source: 'ghl_form', form_id: formId });
+                            if (typeof window !== 'undefined' && (window as any).fbq) {
+                                        (window as any).fbq('track', 'Lead', { content_name: formId, source: 'ghl_form' });
+                            }
+                  }
+          }
+          window.addEventListener('message', handleGhlMessage);
+          return () => window.removeEventListener('message', handleGhlMessage);
+    }, [formId]);
+}
+
 export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, ctaSource }) => {
   useGhlEmbedScript();
+  useGhlLeadTracking(GHL_FORM_ID);
 
   const isInPerson = ctaSource === 'In-Person Review';
 
